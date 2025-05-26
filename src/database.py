@@ -7,6 +7,7 @@ from sqlalchemy.orm import (
     Session,
     Mapped,
     mapped_column,
+    selectinload,
 )
 from datetime import datetime, date
 from typing import Optional, List
@@ -183,16 +184,29 @@ class ProjectManagerDB:
         return project
 
     def get_project_by_name(self, name: str) -> Optional[Project]:
-        """Retrieves a project by its name."""
+        """Retrieves a project by its name, eagerly loading phases and epics."""
         session: Session = self.get_session()
-        project: Optional[Project] = session.query(Project).filter_by(name=name).first()
+        project: Optional[Project] = (
+            session.query(Project)
+            .options(
+                selectinload(Project.phases).selectinload(Phase.epics)
+            )
+            .filter_by(name=name)
+            .first()
+        )
         session.close()
         return project
 
     def get_all_projects(self) -> List[Project]:
-        """Retrieves all projects from the database."""
+        """Retrieves all projects from the database, eagerly loading phases and epics."""
         session: Session = self.get_session()
-        projects: List[Project] = session.query(Project).all()
+        projects: List[Project] = (
+            session.query(Project)
+            .options(
+                selectinload(Project.phases).selectinload(Phase.epics)
+            )
+            .all()
+        )
         session.close()
         return projects
 
@@ -263,7 +277,7 @@ class ProjectManagerDB:
     def update_task_status(self, task_id: int, new_status: str) -> Optional[Task]:
         """Updates the status of a task."""
         session: Session = self.get_session()
-        task: Optional[Task] = session.query(Task).get(task_id)
+        task: Optional[Task] = session.get(Task, task_id)
         if task:
             task.status = new_status
             if new_status == "Done":

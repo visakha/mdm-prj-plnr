@@ -21,13 +21,15 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem,
     QHeaderView,
     QSizePolicy,
+    QDialog,
+    QDialogButtonBox,
 )
 from PySide6.QtCore import QDate, Qt # type: ignore
 from PySide6.QtGui import QIcon, QFont # type: ignore
 from PySide6.QtCore import QCoreApplication  # type: ignore # Explicitly import for QApplication
 
 from datetime import date, timedelta
-from typing import Optional, Dict, Tuple, List 
+from typing import Optional, Dict, Tuple, List, Any
 
 from database import ProjectManagerDB, Project, Phase, Epic,  DailyLog #Task, SubTask,
 from config import ConfigManager
@@ -113,16 +115,98 @@ class ProjectPlannerApp(QMainWindow):
         self._setup_view_logs_tab()
 
     def _show_add_phase_dialog(self) -> None:
-        """Placeholder for Add Phase dialog (not yet implemented)."""
-        QMessageBox.information(self, "Not Implemented", "Add Phase dialog is not implemented yet.")
+        if self._current_project_id is None:
+            QMessageBox.warning(self, "No Project Selected", "Please select a project first.")
+            return
+        dialog = PhaseDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            phase = self.db_manager.add_phase(
+                project_id=self._current_project_id,
+                name=data["name"],
+                description=data["description"],
+                start_date=data["start_date"],
+                end_date=data["end_date"]
+            )
+            # Add to UI tree
+            phase_item = QTreeWidgetItem([phase.name, phase.description or "", "", "", ""])
+            self.project_plan_tree.addTopLevelItem(phase_item)
 
     def _show_add_epic_dialog(self) -> None:
-        """Placeholder for Add Epic dialog (not yet implemented)."""
-        QMessageBox.information(self, "Not Implemented", "Add Epic dialog is not implemented yet.")
+        selected_phase_item = self.project_plan_tree.currentItem()
+        if selected_phase_item is None or selected_phase_item.parent() is not None: # type: ignore
+            QMessageBox.warning(self, "No Phase Selected", "Please select a phase to add an epic.")
+            return
+        # Find phase by name
+        phase_name = selected_phase_item.text(0)
+        phase_id = None
+        for project in self.db_manager.get_all_projects():
+            for phase in project.phases:
+                if phase.name == phase_name:
+                    phase_id = phase.id
+                    break
+        if phase_id is None:
+            QMessageBox.warning(self, "Phase Not Found", "Could not find the selected phase in the database.")
+            return
+        dialog = EpicDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            epic = self.db_manager.add_epic(
+                phase_id=phase_id,
+                name=data["name"],
+                description=data["description"],
+                status=data["status"]
+            )
+            # Add to UI tree
+            epic_item = QTreeWidgetItem([epic.name, epic.description or "", "", epic.status, ""])
+            selected_phase_item.addChild(epic_item)
+            selected_phase_item.setExpanded(True)
 
     def _show_add_task_dialog(self) -> None:
-        """Placeholder for Add Task dialog (not yet implemented)."""
-        QMessageBox.information(self, "Not Implemented", "Add Task dialog is not implemented yet.")
+        selected_epic_item = self.project_plan_tree.currentItem()
+        if not selected_epic_item or selected_epic_item.parent() is None: # type: ignore
+            QMessageBox.warning(self, "No Epic Selected", "Please select an epic to add a task.")
+            return
+        # Find epic by name
+        epic_name = selected_epic_item.text(0)
+        # Traverse tree to get phase name
+        phase_item = selected_epic_item.parent()
+        phase_name = phase_item.text(0) if phase_item else None
+        epic_id = None
+        for project in self.db_manager.get_all_projects():
+            for phase in project.phases:
+                if phase.name == phase_name:
+                    for epic in phase.epics:
+                        if epic.name == epic_name:
+                            epic_id = epic.id
+                            break
+        if epic_id is None:
+            QMessageBox.warning(self, "Epic Not Found", "Could not find the selected epic in the database.")
+            return
+        dialog = TaskDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            data = dialog.get_data()
+            task = self.db_manager.add_task(
+                epic_id=epic_id,
+                name=data["name"],
+                description=data["description"],
+                assigned_to=data["assigned_to"],
+                priority=data["priority"],
+                status=data["status"],
+                jira_link=data["jira_link"],
+                start_date=data["start_date"],
+                due_date=data["due_date"]
+            )
+            # Add to UI tree
+            task_item = QTreeWidgetItem([
+                task.name,
+                task.description or "",
+                task.assigned_to or "",
+                task.status,
+                str(task.due_date) if task.due_date else ""
+            ])
+            selected_epic_item.addChild(task_item)
+            selected_epic_item.setExpanded(True)
 
     def _setup_project_setup_tab(self) -> None:
         """Sets up the Project Setup & Plan tab."""
@@ -660,6 +744,98 @@ class ProjectPlannerApp(QMainWindow):
                 log_text_parts.append(f"India Next Steps:\n{log.next_steps_india}")
             log_text_parts.append("--------------------------------------------------\n")
         self.daily_logs_display.setPlainText("\n".join(log_text_parts))
+
+
+class PhaseDialog(QDialog):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Add Phase")
+        layout = QFormLayout(self)
+        self.name_input = QLineEdit()
+        self.description_input = QLineEdit()
+        self.start_date_input = QDateEdit(QDate.currentDate())
+        self.start_date_input.setCalendarPopup(True)
+        self.end_date_input = QDateEdit(QDate.currentDate())
+        self.end_date_input.setCalendarPopup(True)
+        layout.addRow("Name:", self.name_input)
+        layout.addRow("Description:", self.description_input)
+        layout.addRow("Start Date:", self.start_date_input)
+        layout.addRow("End Date:", self.end_date_input)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addRow(self.button_box)
+
+    def get_data(self) -> dict[str, Any]:
+        return {
+            "name": self.name_input.text(),
+            "description": self.description_input.text(),
+            "start_date": self.start_date_input.date().toPython(),
+            "end_date": self.end_date_input.date().toPython(),
+        }
+
+class EpicDialog(QDialog):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Add Epic")
+        layout = QFormLayout(self)
+        self.name_input = QLineEdit()
+        self.description_input = QLineEdit()
+        self.status_input = QLineEdit("Planned")
+        layout.addRow("Name:", self.name_input)
+        layout.addRow("Description:", self.description_input)
+        layout.addRow("Status:", self.status_input)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addRow(self.button_box)
+
+    def get_data(self) -> dict[str, Any]:
+        return {
+            "name": self.name_input.text(),
+            "description": self.description_input.text(),
+            "status": self.status_input.text(),
+        }
+
+class TaskDialog(QDialog):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Add Task")
+        layout = QFormLayout(self)
+        self.name_input = QLineEdit()
+        self.description_input = QLineEdit()
+        self.assigned_to_input = QLineEdit()
+        self.priority_input = QLineEdit("Medium")
+        self.status_input = QLineEdit("To Do")
+        self.jira_link_input = QLineEdit()
+        self.start_date_input = QDateEdit(QDate.currentDate())
+        self.start_date_input.setCalendarPopup(True)
+        self.due_date_input = QDateEdit(QDate.currentDate())
+        self.due_date_input.setCalendarPopup(True)
+        layout.addRow("Name:", self.name_input)
+        layout.addRow("Description:", self.description_input)
+        layout.addRow("Assigned To:", self.assigned_to_input)
+        layout.addRow("Priority:", self.priority_input)
+        layout.addRow("Status:", self.status_input)
+        layout.addRow("Jira Link:", self.jira_link_input)
+        layout.addRow("Start Date:", self.start_date_input)
+        layout.addRow("Due Date:", self.due_date_input)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addRow(self.button_box)
+
+    def get_data(self) -> dict[str, Any]:
+        return {
+            "name": self.name_input.text(),
+            "description": self.description_input.text(),
+            "assigned_to": self.assigned_to_input.text(),
+            "priority": self.priority_input.text(),
+            "status": self.status_input.text(),
+            "jira_link": self.jira_link_input.text(),
+            "start_date": self.start_date_input.date().toPython(),
+            "due_date": self.due_date_input.date().toPython(),
+        }
 
 
 if __name__ == "__main__":
