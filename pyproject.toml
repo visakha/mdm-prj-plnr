@@ -6,7 +6,8 @@ dependencies = [
     "PySide6",
     "SQLAlchemy>=2.0,<3.0",
     "configparser",
-    "pre-commit"
+    "pre-commit",
+    "pyqtdarktheme"
 
 ]
 requires-python = ">=3.12"
