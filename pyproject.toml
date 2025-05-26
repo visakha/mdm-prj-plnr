@@ -1,0 +1,21 @@
+[project]
+name = "pyside6_etl_mdm_dashboard"
+version = "0.1.0"
+description = "ETL and MDM Project Tracker using PyQt6 and SQLite"
+dependencies = [
+    "PySide6",
+    "SQLAlchemy>=2.0,<3.0",
+    "configparser",
+    "pre-commit"
+
+]
+requires-python = ">=3.12"
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.mypy]
+strict = true
+python_version = 3.12
+ignore_missing_imports = true

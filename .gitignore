@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+*.pyo
+*$py.class
+
+# SQLite database files
+*.db
+
+# Environment folders
+env/
+venv/
+
+# PySide6 build artifacts
+build/
+dist/
+*.spec
+
+# VSCode and other editor settings
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python egg files
+*.egg-info
