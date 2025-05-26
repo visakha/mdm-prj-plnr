@@ -156,6 +156,18 @@ class ProjectPlannerApp(QMainWindow):
         self.add_task_shortcut = QShortcut(QKeySequence("Ctrl+l"), self)
         self.add_task_shortcut.activated.connect(self._show_add_task_dialog)
 
+        # Keyboard shortcuts for switching tabs: Alt+0 to Alt+4
+        self.tab_shortcuts: List[QShortcut] = []
+        for i in range(5):
+            shortcut = QShortcut(QKeySequence(f"Alt+{i}"), self)
+            shortcut.activated.connect(lambda idx=i: self.tab_widget.setCurrentIndex(idx))
+            self.tab_shortcuts.append(shortcut)
+
+        # Connect theme change event from project selection tab
+        self.project_selection_tab.theme_combo.currentIndexChanged.connect(
+            lambda: self._on_theme_changed_from_tab()
+        )
+
     def _wire_up_tabs(self) -> None:
         # Project Selection Tab
         self.project_selection_tab.project_combo.currentIndexChanged.disconnect()
@@ -173,7 +185,7 @@ class ProjectPlannerApp(QMainWindow):
         self.project_setup_tab.add_initial_plan_btn.clicked.connect(self._add_initial_project_plan)
         # Daily Runner Tab
         self.daily_runner_tab.current_log_date_display.dateChanged.disconnect()
-        self.daily_runner_tab.current_log_date_display.dateChanged.connect(self._on_log_date_changed)
+        self.daily_runner_tab.current_log_date_display.dateChanged.connect(self._update_log_date_from_tab)
         self.daily_runner_tab.simulate_next_day_btn.clicked.disconnect()
         self.daily_runner_tab.simulate_next_day_btn.clicked.connect(self._simulate_next_day)
         self.daily_runner_tab.submit_daily_log_btn.clicked.disconnect()
@@ -343,6 +355,7 @@ class ProjectPlannerApp(QMainWindow):
         name: str = self.project_name_input.text().strip()
         start_date_q: QDate = self.project_start_date_input.date()
         end_date_target_q: QDate = self.project_end_date_target_input.date()
+        theme: str = self.project_selection_tab.theme_combo.currentText()
 
         if not name:
             QMessageBox.warning(self, "Input Error", "Project name cannot be empty.")
@@ -357,12 +370,24 @@ class ProjectPlannerApp(QMainWindow):
             return
 
         try:
-            project: Project = self.db_manager.create_project(name, start_date_py, end_date_target_py)
+            project: Project = self.db_manager.create_project(name, start_date_py, end_date_target_py, theme)
+            self._apply_theme(theme)
             QMessageBox.information(self, "Success", f"Project '{project.name}' created successfully!")
             self.project_name_input.clear()
             self._populate_project_combos() # Refresh combos and select new project
         except Exception as e:
             QMessageBox.critical(self, "Database Error", f"Failed to create project: {e}")
+
+    def _apply_theme(self, theme: str) -> None:
+        """Apply the selected theme to the whole application using qt-material."""
+        try:
+            from qt_material import apply_stylesheet  # type: ignore
+            if theme == "default":
+                apply_stylesheet(self, theme="dark_cyan_500")  # Use a dark theme as default
+            else:
+                apply_stylesheet(self, theme=theme)
+        except Exception as e:
+            QMessageBox.warning(self, "Theme Error", f"Could not apply theme '{theme}': {e}")
 
     def _populate_project_combos(self) -> None:
         """Refreshes the project dropdowns in Project Setup and View Logs tabs."""
@@ -393,6 +418,13 @@ class ProjectPlannerApp(QMainWindow):
         if project_id is not None:
             self._current_project_id = project_id
             self.current_project_label.setText(f"Current Project: {self.project_combo.currentText()}")
+            # Apply the theme for the selected project
+            session = self.db_manager.get_session()
+            project = session.get(Project, project_id)
+            if project and hasattr(project, "theme"):
+                self._apply_theme(project.theme)
+            session.close()
+            self.setWindowTitle(f"Project Planning & Daily Runner for ETL/MDM [{self.project_combo.currentText()}]")
             self._load_project_plan_tree() # Load plan for the newly selected project
             # Ensure the log combo also reflects the current project
             if self.log_project_combo.currentData() != project_id:
@@ -404,6 +436,7 @@ class ProjectPlannerApp(QMainWindow):
         else:
             self._current_project_id = None
             self.current_project_label.setText("Current Project: <None Selected>")
+            self.setWindowTitle("Project Planning & Daily Runner for ETL/MDM")
             self.project_plan_tree.clear() # Clear tree if no project is selected
 
     def _load_project_plan_tree(self) -> None:
@@ -413,7 +446,7 @@ class ProjectPlannerApp(QMainWindow):
             return
 
         session = self.db_manager.get_session()
-        project: Optional[Project] = session.query(Project).get(self._current_project_id)
+        project: Optional[Project] = session.get(Project, self._current_project_id)
 
         if not project:
             session.close()
@@ -622,6 +655,11 @@ class ProjectPlannerApp(QMainWindow):
             self.decisions_made_input.clear()
             self.next_steps_us_input.clear()
             self.next_steps_india_input.clear()
+            # Ensure View Logs tab shows the current project after log submission
+            if self.log_project_combo.currentData() != self._current_project_id:
+                index = self.log_project_combo.findData(self._current_project_id)
+                if index != -1:
+                    self.log_project_combo.setCurrentIndex(index)
             self._load_daily_logs_display() # Refresh logs display
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to submit daily log: {e}")
@@ -685,6 +723,24 @@ class ProjectPlannerApp(QMainWindow):
                 log_text_parts.append(f"India Next Steps:\n{log.next_steps_india}")
             log_text_parts.append("--------------------------------------------------\n")
         self.daily_logs_display.setPlainText("\n".join(log_text_parts))
+
+    def _update_log_date_from_tab(self, new_date: QDate) -> None:
+        """Ensures the main app's _current_log_date is always in sync with the tab's date widget."""
+        self._current_log_date = new_date
+        # Also update the QDateEdit in case it was changed elsewhere
+        self.current_log_date_display.setDate(new_date)
+
+    def _on_theme_changed_from_tab(self) -> None:
+        theme = self.project_selection_tab.theme_combo.currentText()
+        self._apply_theme(theme)
+        # If a project is selected, update its theme in the DB
+        if self._current_project_id is not None:
+            session = self.db_manager.get_session()
+            project = session.get(Project, self._current_project_id)
+            if project:
+                project.theme = theme
+                session.commit()
+            session.close()
 
 
 class PhaseDialog(QDialog):

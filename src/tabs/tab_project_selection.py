@@ -27,6 +27,17 @@ class ProjectSelectionTab(QWidget):
         project_selection_layout.addRow("Project Start Date:", self.project_start_date_input)
         project_selection_layout.addRow("Target End Date (7 months):", self.project_end_date_target_input)
         project_selection_layout.addRow("", self.create_project_btn)
+        self.theme_combo: QComboBox = QComboBox()
+        self.theme_combo.addItems([
+            "dark_amber", "dark_blue", "dark_cyan", "dark_lightgreen", "dark_pink", "dark_purple", "dark_red", "dark_teal", "dark_yellow",
+            "light_amber", "light_blue_500", "light_blue", "light_cyan_500", "light_cyan", "light_lightgreen_500", "light_lightgreen", "light_orange", "light_pink_500", "light_pink", "light_purple_500", "light_purple", "light_red_500", "light_red", "light_teal_500", "light_teal", "light_yellow"
+        ])
+        project_selection_layout.addRow("Theme:", self.theme_combo)
         project_selection_group.setLayout(project_selection_layout)
         layout.addWidget(project_selection_group)
         layout.addStretch()
+
+    def _on_theme_changed(self):
+        # Call parent's theme change handler if available
+        if hasattr(self.parent(), 'on_theme_changed'):
+            self.parent().on_theme_changed(self.theme_combo.currentText())

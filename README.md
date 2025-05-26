@@ -78,4 +78,14 @@ prompts:
 ```text
 prompts: 
     split main_app.py into separate files each by its tab
+    looks like the main_app has the duplicate code still
+    the tab daily runner is not saving the information into the Database, please fix it
+    can you add keyboard short cuts for the top level tabs, Alt 0, Alt 1, Alt 2, Alt 3 and Alt 4
+    modfiy the title to append the Project name in square brackets
+    
+    modify the Data Model and the UI of the tab 'project selection' to have a pick list of Themes, so that when the user picks a theme for that project then that theme should be applied to the whole application, I have already installed the qtsass and qt-material
+
+    fix error for the theme as a col in the DB
+        python -c "import sqlite3; conn = sqlite3.connect('project_plan.db'); conn.execute(\"ALTER TABLE projects ADD COLUMN theme TEXT DEFAULT 'default'\"); conn.commit(); conn.close()"
+
 ```

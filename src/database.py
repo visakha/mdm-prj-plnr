@@ -27,6 +27,7 @@ class Project(Base):
     status: Mapped[str] = mapped_column(
         String, default="Planned"
     )  # Planned, In Progress, Completed, On Hold
+    theme: Mapped[str] = mapped_column(String, default="default")  # New field for theme
 
     # Relationships
     phases: Mapped[List["Phase"]] = relationship(
@@ -37,7 +38,7 @@ class Project(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Project(id={self.id}, name='{self.name}', status='{self.status}')>"
+        return f"<Project(id={self.id}, name='{self.name}', status='{self.status}', theme='{self.theme}')>"
 
 
 class Phase(Base):
@@ -171,11 +172,11 @@ class ProjectManagerDB:
         """Returns a new SQLAlchemy session."""
         return self.Session()
 
-    def create_project(self, name: str, start_date: date, end_date_target: date) -> Project:
+    def create_project(self, name: str, start_date: date, end_date_target: date, theme: str = "default") -> Project:
         """Creates a new project in the database."""
         session: Session = self.get_session()
         project: Project = Project(
-            name=name, start_date=start_date, end_date_target=end_date_target
+            name=name, start_date=start_date, end_date_target=end_date_target, theme=theme
         )
         session.add(project)
         session.commit()
