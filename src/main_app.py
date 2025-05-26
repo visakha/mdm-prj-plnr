@@ -34,6 +34,7 @@ from typing import Optional, Dict, Tuple, List, Any
 from database import ProjectManagerDB, Project, Phase, Epic,  DailyLog #Task, SubTask,
 from config import ConfigManager
 import qdarktheme # type: ignore 
+from PySide6.QtGui import QKeySequence, QShortcut
 
 class ProjectPlannerApp(QMainWindow):
     """
@@ -119,6 +120,14 @@ class ProjectPlannerApp(QMainWindow):
         self.view_logs_tab: QWidget = QWidget()
         self.tab_widget.addTab(self.view_logs_tab, "4. View Daily Logs")
         self._setup_view_logs_tab()
+
+        # Keyboard shortcuts for Add Phase, Add Epic, Add Task
+        self.add_phase_shortcut = QShortcut(QKeySequence("Ctrl+h"), self)
+        self.add_phase_shortcut.activated.connect(self._show_add_phase_dialog)
+        self.add_epic_shortcut = QShortcut(QKeySequence("Ctrl+j"), self)
+        self.add_epic_shortcut.activated.connect(self._show_add_epic_dialog)
+        self.add_task_shortcut = QShortcut(QKeySequence("Ctrl+l"), self)
+        self.add_task_shortcut.activated.connect(self._show_add_task_dialog)
 
     def _show_add_phase_dialog(self) -> None:
         if self._current_project_id is None:
@@ -277,22 +286,20 @@ class ProjectPlannerApp(QMainWindow):
     def _setup_project_setup_tab(self) -> None:
         """Sets up the Project Setup & Plan tab."""
         layout: QVBoxLayout = QVBoxLayout(self.project_setup_tab)
-
-        # Initial Project Plan Group (no project selection here now)
-        plan_group: QGroupBox = QGroupBox("Project Plan Structure (Phases, Epics, Tasks)")
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        plan_group: QGroupBox = QGroupBox()
+        plan_group.setFlat(True)
+        plan_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         plan_layout: QVBoxLayout = QVBoxLayout()
-        plan_layout.addWidget(QLabel("This section allows you to define your project hierarchy."))
-
-        # Tree view for project plan
+        plan_layout.setContentsMargins(0, 0, 0, 0)
+        plan_layout.setSpacing(0)
         self.project_plan_tree = QTreeWidget()
-        self.project_plan_tree.setHeaderLabels(["Item", "Description", "Assigned To", "Status", "Due Date"])  # type: ignore
-        self.project_plan_tree.header().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.ResizeToContents
-        )
+        self.project_plan_tree.setHeaderLabels(["Item", "Description", "Assigned To", "Status", "Due Date"]) # type: ignore
+        self.project_plan_tree.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.project_plan_tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.project_plan_tree.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        plan_layout.addWidget(self.project_plan_tree)
-
-        # Buttons for adding plan elements (currently placeholder, auto-populate used)
+        plan_layout.addWidget(self.project_plan_tree, stretch=1)
         plan_buttons_layout: QHBoxLayout = QHBoxLayout()
         # Add Phase Button
         self.add_phase_btn = QPushButton("Add Phase")
@@ -317,9 +324,8 @@ class ProjectPlannerApp(QMainWindow):
 
         plan_layout.addLayout(plan_buttons_layout)
         plan_group.setLayout(plan_layout)
-        layout.addWidget(plan_group)
-
-        layout.addStretch()
+        layout.addWidget(plan_group, stretch=1)
+        # Remove layout.addStretch() to allow the tree to use all vertical space
 
     def _setup_daily_runner_tab(self) -> None:
         """Sets up the Daily Runner tab for logging daily activities."""
@@ -791,6 +797,7 @@ class PhaseDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Add Phase")
+        self.resize(600, 500)  # M
         layout = QFormLayout(self)
         self.name_input = QLineEdit()
         self.description_input = QLineEdit()
@@ -819,6 +826,7 @@ class EpicDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Add Epic")
+        self.resize(600, 500)  # M
         layout = QFormLayout(self)
         self.name_input = QLineEdit()
         self.description_input = QLineEdit()
@@ -842,6 +850,7 @@ class TaskDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Add Task")
+        self.resize(600, 500)  # Make the dialog larger (width, height)
         layout = QFormLayout(self)
         self.name_input = QLineEdit()
         self.description_input = QLineEdit()

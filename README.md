@@ -66,5 +66,9 @@ prompts:
 ## Branch 003
 ```text
 prompts: 
-    Modify the main_app.py to start in full screen and move the "select or create Project" section to its own tab/screen      
+    Modify the main_app.py to start in full screen and move the "select or create Project" section to its own tab/screen   
+    Modify the main_app.py to have Keyboard short cuts 'Add Phase' (space + p), 'Add Epic' (space + e) and 'Add Task' (space + t)
+    Modify the main_app.py to make the Project Plan and structure pane occupy max screen 
+    The table in the Project Setup Plan tab, is still not occupying the complete screen vertically
+    modify _show_add_task_dialog to show the dialog box to occupy more screen size than currently set
 ```
