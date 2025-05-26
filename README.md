@@ -72,3 +72,10 @@ prompts:
     The table in the Project Setup Plan tab, is still not occupying the complete screen vertically
     modify _show_add_task_dialog to show the dialog box to occupy more screen size than currently set
 ```
+
+
+## Branch 004
+```text
+prompts: 
+    split main_app.py into separate files each by its tab
+```

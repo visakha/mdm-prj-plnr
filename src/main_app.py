@@ -36,6 +36,12 @@ from config import ConfigManager
 import qdarktheme # type: ignore 
 from PySide6.QtGui import QKeySequence, QShortcut
 
+from tabs.tab_project_selection import ProjectSelectionTab # type: ignore
+from tabs.tab_project_setup import ProjectSetupTab # type: ignore
+from tabs.tab_daily_runner import DailyRunnerTab # type: ignore
+from tabs.tab_properties import PropertiesTab # type: ignore
+from tabs.tab_view_logs import ViewLogsTab # type: ignore
+
 class ProjectPlannerApp(QMainWindow):
     """
     Main application window for the Project Planning & Daily Runner.
@@ -84,7 +90,8 @@ class ProjectPlannerApp(QMainWindow):
         self.daily_logs_display: QPlainTextEdit
 
         self._setup_ui()
-        self._load_initial_data()  # Populate project dropdowns
+        # Populate project dropdowns after widgets are wired up
+        self._populate_project_combos()
 
     def _setup_ui(self) -> None:
         """Sets up the main window's user interface."""
@@ -97,29 +104,49 @@ class ProjectPlannerApp(QMainWindow):
         self.main_layout.addWidget(self.tab_widget)
 
         # --- Project Selection Tab ---
-        self.project_selection_tab: QWidget = QWidget()
+        self.project_selection_tab = ProjectSelectionTab(
+            parent=self,
+            on_project_selected=lambda: None,  # Placeholder, will wire up after instantiation
+            create_project_callback=lambda: None,
+        )
         self.tab_widget.addTab(self.project_selection_tab, "0. Project Selection")
-        self._setup_project_selection_tab()
 
         # --- Project Setup Tab ---
-        self.project_setup_tab: QWidget = QWidget()
+        self.project_setup_tab = ProjectSetupTab(
+            parent=self,
+            show_add_phase=lambda: None,
+            show_add_epic=lambda: None,
+            show_add_task=lambda: None,
+            add_initial_plan=lambda: None,
+        )
         self.tab_widget.addTab(self.project_setup_tab, "1. Project Setup & Plan")
-        self._setup_project_setup_tab()
 
         # --- Daily Runner Tab ---
-        self.daily_runner_tab: QWidget = QWidget()
+        self.daily_runner_tab = DailyRunnerTab(
+            parent=self,
+            on_log_date_changed=lambda: None,
+            simulate_next_day=lambda: None,
+            submit_daily_log=lambda: None,
+        )
         self.tab_widget.addTab(self.daily_runner_tab, "2. Daily Runner")
-        self._setup_daily_runner_tab()
 
         # --- Properties Tab ---
-        self.properties_tab: QWidget = QWidget()
+        self.properties_tab = PropertiesTab(
+            parent=self,
+            config_manager=self.config_manager,
+            save_properties_callback=lambda: None,
+        )
         self.tab_widget.addTab(self.properties_tab, "3. Application Properties")
-        self._setup_properties_tab()
 
         # --- View Logs Tab ---
-        self.view_logs_tab: QWidget = QWidget()
+        self.view_logs_tab = ViewLogsTab(
+            parent=self,
+            load_daily_logs_display_callback=lambda: None,
+        )
         self.tab_widget.addTab(self.view_logs_tab, "4. View Daily Logs")
-        self._setup_view_logs_tab()
+
+        # Now wire up the real callbacks and cross-tab references
+        self._wire_up_tabs()
 
         # Keyboard shortcuts for Add Phase, Add Epic, Add Task
         self.add_phase_shortcut = QShortcut(QKeySequence("Ctrl+h"), self)
@@ -128,6 +155,62 @@ class ProjectPlannerApp(QMainWindow):
         self.add_epic_shortcut.activated.connect(self._show_add_epic_dialog)
         self.add_task_shortcut = QShortcut(QKeySequence("Ctrl+l"), self)
         self.add_task_shortcut.activated.connect(self._show_add_task_dialog)
+
+    def _wire_up_tabs(self) -> None:
+        # Project Selection Tab
+        self.project_selection_tab.project_combo.currentIndexChanged.disconnect()
+        self.project_selection_tab.project_combo.currentIndexChanged.connect(self._on_project_selected)
+        self.project_selection_tab.create_project_btn.clicked.disconnect()
+        self.project_selection_tab.create_project_btn.clicked.connect(self._create_new_project)
+        # Project Setup Tab
+        self.project_setup_tab.add_phase_btn.clicked.disconnect()
+        self.project_setup_tab.add_phase_btn.clicked.connect(self._show_add_phase_dialog)
+        self.project_setup_tab.add_epic_btn.clicked.disconnect()
+        self.project_setup_tab.add_epic_btn.clicked.connect(self._show_add_epic_dialog)
+        self.project_setup_tab.add_task_btn.clicked.disconnect()
+        self.project_setup_tab.add_task_btn.clicked.connect(self._show_add_task_dialog)
+        self.project_setup_tab.add_initial_plan_btn.clicked.disconnect()
+        self.project_setup_tab.add_initial_plan_btn.clicked.connect(self._add_initial_project_plan)
+        # Daily Runner Tab
+        self.daily_runner_tab.current_log_date_display.dateChanged.disconnect()
+        self.daily_runner_tab.current_log_date_display.dateChanged.connect(self._on_log_date_changed)
+        self.daily_runner_tab.simulate_next_day_btn.clicked.disconnect()
+        self.daily_runner_tab.simulate_next_day_btn.clicked.connect(self._simulate_next_day)
+        self.daily_runner_tab.submit_daily_log_btn.clicked.disconnect()
+        self.daily_runner_tab.submit_daily_log_btn.clicked.connect(self._submit_daily_log)
+        # Properties Tab
+        self.properties_tab.save_properties_btn.clicked.disconnect()
+        self.properties_tab.save_properties_btn.clicked.connect(self._save_properties)
+        # View Logs Tab
+        self.view_logs_tab.log_project_combo.currentIndexChanged.disconnect()
+        self.view_logs_tab.log_project_combo.currentIndexChanged.connect(self._load_daily_logs_display)
+
+        # Set up cross-references for shared widgets if needed
+        self.project_combo = self.project_selection_tab.project_combo
+        self.project_name_input = self.project_selection_tab.project_name_input
+        self.project_start_date_input = self.project_selection_tab.project_start_date_input
+        self.project_end_date_target_input = self.project_selection_tab.project_end_date_target_input
+        self.create_project_btn = self.project_selection_tab.create_project_btn
+        self.project_plan_tree = self.project_setup_tab.project_plan_tree
+        self.add_phase_btn = self.project_setup_tab.add_phase_btn
+        self.add_epic_btn = self.project_setup_tab.add_epic_btn
+        self.add_task_btn = self.project_setup_tab.add_task_btn
+        self.add_initial_plan_btn = self.project_setup_tab.add_initial_plan_btn
+        self.current_project_label = self.daily_runner_tab.current_project_label
+        self.current_log_date_display = self.daily_runner_tab.current_log_date_display
+        self.simulate_next_day_btn = self.daily_runner_tab.simulate_next_day_btn
+        self.activities_us_input = self.daily_runner_tab.activities_us_input
+        self.activities_india_input = self.daily_runner_tab.activities_india_input
+        self.blockers_us_input = self.daily_runner_tab.blockers_us_input
+        self.blockers_india_input = self.daily_runner_tab.blockers_india_input
+        self.decisions_made_input = self.daily_runner_tab.decisions_made_input
+        self.next_steps_us_input = self.daily_runner_tab.next_steps_us_input
+        self.next_steps_india_input = self.daily_runner_tab.next_steps_india_input
+        self.submit_daily_log_btn = self.daily_runner_tab.submit_daily_log_btn
+        self.property_inputs = self.properties_tab.property_inputs
+        self.save_properties_btn = self.properties_tab.save_properties_btn
+        self.log_project_combo = self.view_logs_tab.log_project_combo
+        self.daily_logs_display = self.view_logs_tab.daily_logs_display
 
     def _show_add_phase_dialog(self) -> None:
         if self._current_project_id is None:
@@ -255,194 +338,31 @@ class ProjectPlannerApp(QMainWindow):
             selected_epic_item.addChild(task_item)
             selected_epic_item.setExpanded(True)
 
-    def _setup_project_selection_tab(self) -> None:
-        """Sets up the Project Selection / Creation tab."""
-        layout: QVBoxLayout = QVBoxLayout(self.project_selection_tab)
-        project_selection_group: QGroupBox = QGroupBox("Select or Create Project")
-        project_selection_layout: QFormLayout = QFormLayout()
-        self.project_combo = QComboBox()
-        self.project_combo.currentIndexChanged.connect(self._on_project_selected)
-        project_selection_layout.addRow("Select Existing Project:", self.project_combo)
+    def _create_new_project(self) -> None:
+        """Creates a new project based on user input."""
+        name: str = self.project_name_input.text().strip()
+        start_date_q: QDate = self.project_start_date_input.date()
+        end_date_target_q: QDate = self.project_end_date_target_input.date()
 
-        self.project_name_input = QLineEdit()
-        self.project_start_date_input = QDateEdit(QDate.currentDate())
-        self.project_start_date_input.setCalendarPopup(True)
-        # Calculate 7 months from current date for target end date
-        self.project_end_date_target_input = QDateEdit(QDate.currentDate().addMonths(7))
-        self.project_end_date_target_input.setCalendarPopup(True)
-        self.create_project_btn = QPushButton("Create New Project")
-        self.create_project_btn.clicked.connect(self._create_new_project)
+        if not name:
+            QMessageBox.warning(self, "Input Error", "Project name cannot be empty.")
+            return
 
-        project_selection_layout.addRow("New Project Name:", self.project_name_input)
-        project_selection_layout.addRow("Project Start Date:", self.project_start_date_input)
-        project_selection_layout.addRow(
-            "Target End Date (7 months):", self.project_end_date_target_input
-        )
-        project_selection_layout.addRow("", self.create_project_btn)
-        project_selection_group.setLayout(project_selection_layout)
-        layout.addWidget(project_selection_group)
-        layout.addStretch()
+        start_date_py: date = date(start_date_q.year(), start_date_q.month(), start_date_q.day())
+        end_date_target_py: date = date(end_date_target_q.year(), end_date_target_q.month(), end_date_target_q.day())
 
-    def _setup_project_setup_tab(self) -> None:
-        """Sets up the Project Setup & Plan tab."""
-        layout: QVBoxLayout = QVBoxLayout(self.project_setup_tab)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        plan_group: QGroupBox = QGroupBox()
-        plan_group.setFlat(True)
-        plan_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        plan_layout: QVBoxLayout = QVBoxLayout()
-        plan_layout.setContentsMargins(0, 0, 0, 0)
-        plan_layout.setSpacing(0)
-        self.project_plan_tree = QTreeWidget()
-        self.project_plan_tree.setHeaderLabels(["Item", "Description", "Assigned To", "Status", "Due Date"]) # type: ignore
-        self.project_plan_tree.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.project_plan_tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.project_plan_tree.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        plan_layout.addWidget(self.project_plan_tree, stretch=1)
-        plan_buttons_layout: QHBoxLayout = QHBoxLayout()
-        # Add Phase Button
-        self.add_phase_btn = QPushButton("Add Phase")
-        self.add_phase_btn.clicked.connect(self._show_add_phase_dialog)
+        existing_project: Optional[Project] = self.db_manager.get_project_by_name(name)
+        if existing_project:
+            QMessageBox.warning(self, "Duplicate Project", f"Project with name '{name}' already exists.")
+            return
 
-        # Add Epic Button
-        self.add_epic_btn = QPushButton("Add Epic")
-        self.add_epic_btn.clicked.connect(self._show_add_epic_dialog)
-
-        # Add Task Button
-        self.add_task_btn = QPushButton("Add Task")
-        self.add_task_btn.clicked.connect(self._show_add_task_dialog)
-        
-        self.add_initial_plan_btn = QPushButton("Auto-Populate Project Plan")
-        self.add_initial_plan_btn.clicked.connect(self._add_initial_project_plan)
-
-        plan_buttons_layout.addWidget(self.add_phase_btn)
-        plan_buttons_layout.addWidget(self.add_epic_btn)
-        plan_buttons_layout.addWidget(self.add_task_btn)
-        plan_buttons_layout.addStretch()
-        plan_buttons_layout.addWidget(self.add_initial_plan_btn)
-
-        plan_layout.addLayout(plan_buttons_layout)
-        plan_group.setLayout(plan_layout)
-        layout.addWidget(plan_group, stretch=1)
-        # Remove layout.addStretch() to allow the tree to use all vertical space
-
-    def _setup_daily_runner_tab(self) -> None:
-        """Sets up the Daily Runner tab for logging daily activities."""
-        layout: QVBoxLayout = QVBoxLayout(self.daily_runner_tab)
-
-        # Current Project and Date Display
-        top_bar_layout: QHBoxLayout = QHBoxLayout()
-        self.current_project_label = QLabel("Current Project: <None Selected>")
-        self.current_project_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))  # type: ignore
-        self.current_log_date_display = QDateEdit(self._current_log_date)
-        self.current_log_date_display.setCalendarPopup(True)
-        self.current_log_date_display.dateChanged.connect(self._on_log_date_changed)
-        self.simulate_next_day_btn = QPushButton("Simulate Next Day >>")
-        self.simulate_next_day_btn.clicked.connect(self._simulate_next_day)
-
-        top_bar_layout.addWidget(self.current_project_label)
-        top_bar_layout.addStretch()
-        top_bar_layout.addWidget(QLabel("Logging Date:"))
-        top_bar_layout.addWidget(self.current_log_date_display)
-        top_bar_layout.addWidget(self.simulate_next_day_btn)
-        layout.addLayout(top_bar_layout)
-
-        # Daily Status Update Group
-        daily_log_group: QGroupBox = QGroupBox("Daily Status Update")
-        log_layout: QFormLayout = QFormLayout()
-
-        self.activities_us_input = QPlainTextEdit()
-        self.activities_us_input.setPlaceholderText(
-            "Activities by USA Team (SSA1, SA2) - e.g., 'Conducted client workshop on MDM UI requirements.'"
-        )
-        self.activities_india_input = QPlainTextEdit()
-        self.activities_india_input.setPlaceholderText(
-            "Activities by India Team - e.g., 'Started development for Ingress Source 1 data mapping.'"
-        )
-        self.blockers_us_input = QPlainTextEdit()
-        self.blockers_us_input.setPlaceholderText(
-            "Blockers for USA Team - e.g., 'Awaiting client approval on data model changes.'"
-        )
-        self.blockers_india_input = QPlainTextEdit()
-        self.blockers_india_input.setPlaceholderText(
-            "Blockers for India Team - e.g., 'Need clarification on transformation logic for field X.'"
-        )
-        self.decisions_made_input = QPlainTextEdit()
-        self.decisions_made_input.setPlaceholderText(
-            "Key Decisions Made - e.g., 'Agreed to use workaround Y for vendor product limitation.'"
-        )
-        self.next_steps_us_input = QPlainTextEdit()
-        self.next_steps_us_input.setPlaceholderText(
-            "Next Steps for USA Team - e.g., 'Prepare design for Egress module.'"
-        )
-        self.next_steps_india_input = QPlainTextEdit()
-        self.next_steps_india_input.setPlaceholderText(
-            "Next Steps for India Team - e.g., 'Complete unit tests for Ingress Source 1.'"
-        )
-
-        log_layout.addRow("US Activities:", self.activities_us_input)
-        log_layout.addRow("India Activities:", self.activities_india_input)
-        log_layout.addRow("US Blockers:", self.blockers_us_input)
-        log_layout.addRow("India Blockers:", self.blockers_india_input)
-        log_layout.addRow("Decisions Made:", self.decisions_made_input)
-        log_layout.addRow("US Next Steps:", self.next_steps_us_input)
-        log_layout.addRow("India Next Steps:", self.next_steps_india_input)
-
-        self.submit_daily_log_btn = QPushButton("Submit Daily Log")
-        self.submit_daily_log_btn.clicked.connect(self._submit_daily_log)
-        log_layout.addRow("", self.submit_daily_log_btn)
-
-        daily_log_group.setLayout(log_layout)
-        layout.addWidget(daily_log_group)
-        layout.addStretch()
-
-    def _setup_properties_tab(self) -> None:
-        """Sets up the Application Properties tab."""
-        layout: QVBoxLayout = QVBoxLayout(self.properties_tab)
-        self.properties_form_layout: QFormLayout = QFormLayout()
-
-        # Load all properties from config and add to form
-        for section in self.config_manager.config.sections():
-            group_box: QGroupBox = QGroupBox(section.replace('_', ' ').title())
-            group_layout: QFormLayout = QFormLayout()
-            for key, value in self.config_manager.config.items(section):
-                label: QLabel = QLabel(key.replace('_', ' ').title() + ":")
-                input_field: QLineEdit = QLineEdit(value)
-                group_layout.addRow(label, input_field)
-                self.property_inputs[(section, key)] = input_field
-            group_box.setLayout(group_layout)
-            self.properties_form_layout.addRow(group_box)
-
-        self.save_properties_btn = QPushButton("Save Properties")
-        self.save_properties_btn.clicked.connect(self._save_properties)
-        self.properties_form_layout.addRow("", self.save_properties_btn)
-
-        layout.addLayout(self.properties_form_layout)
-        layout.addStretch()
-
-    def _setup_view_logs_tab(self) -> None:
-        """Sets up the View Daily Logs tab."""
-        layout: QVBoxLayout = QVBoxLayout(self.view_logs_tab)
-
-        log_selection_layout: QHBoxLayout = QHBoxLayout()
-        self.log_project_combo = QComboBox()
-        self.log_project_combo.currentIndexChanged.connect(self._load_daily_logs_display)
-        log_selection_layout.addWidget(QLabel("Select Project to View Logs:"))
-        log_selection_layout.addWidget(self.log_project_combo)
-        log_selection_layout.addStretch()
-        layout.addLayout(log_selection_layout)
-
-        self.daily_logs_display = QPlainTextEdit()
-        self.daily_logs_display.setReadOnly(True)
-        self.daily_logs_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        layout.addWidget(self.daily_logs_display)
-
-    # --- Core Logic Methods ---
-
-    def _load_initial_data(self) -> None:
-        """Populates project dropdowns on application startup."""
-        self._populate_project_combos()
+        try:
+            project: Project = self.db_manager.create_project(name, start_date_py, end_date_target_py)
+            QMessageBox.information(self, "Success", f"Project '{project.name}' created successfully!")
+            self.project_name_input.clear()
+            self._populate_project_combos() # Refresh combos and select new project
+        except Exception as e:
+            QMessageBox.critical(self, "Database Error", f"Failed to create project: {e}")
 
     def _populate_project_combos(self) -> None:
         """Refreshes the project dropdowns in Project Setup and View Logs tabs."""
@@ -485,32 +405,6 @@ class ProjectPlannerApp(QMainWindow):
             self._current_project_id = None
             self.current_project_label.setText("Current Project: <None Selected>")
             self.project_plan_tree.clear() # Clear tree if no project is selected
-
-    def _create_new_project(self) -> None:
-        """Creates a new project based on user input."""
-        name: str = self.project_name_input.text().strip()
-        start_date_q: QDate = self.project_start_date_input.date()
-        end_date_target_q: QDate = self.project_end_date_target_input.date()
-
-        if not name:
-            QMessageBox.warning(self, "Input Error", "Project name cannot be empty.")
-            return
-
-        start_date_py: date = date(start_date_q.year(), start_date_q.month(), start_date_q.day())
-        end_date_target_py: date = date(end_date_target_q.year(), end_date_target_q.month(), end_date_target_q.day())
-
-        existing_project: Optional[Project] = self.db_manager.get_project_by_name(name)
-        if existing_project:
-            QMessageBox.warning(self, "Duplicate Project", f"Project with name '{name}' already exists.")
-            return
-
-        try:
-            project: Project = self.db_manager.create_project(name, start_date_py, end_date_target_py)
-            QMessageBox.information(self, "Success", f"Project '{project.name}' created successfully!")
-            self.project_name_input.clear()
-            self._populate_project_combos() # Refresh combos and select new project
-        except Exception as e:
-            QMessageBox.critical(self, "Database Error", f"Failed to create project: {e}")
 
     def _load_project_plan_tree(self) -> None:
         """Loads and displays the project plan (phases, epics, tasks) in the tree view."""
