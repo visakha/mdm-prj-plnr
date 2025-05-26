@@ -61,3 +61,10 @@ prompts:
     great, nice work,  now I want you to auto select the parent Epic when the add task button is clicked
 
 ```
+
+
+## Branch 003
+```text
+prompts: 
+    Modify the main_app.py to start in full screen and move the "select or create Project" section to its own tab/screen      
+```

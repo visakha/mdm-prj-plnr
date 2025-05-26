@@ -33,7 +33,7 @@ from typing import Optional, Dict, Tuple, List, Any
 
 from database import ProjectManagerDB, Project, Phase, Epic,  DailyLog #Task, SubTask,
 from config import ConfigManager
-
+import qdarktheme # type: ignore 
 
 class ProjectPlannerApp(QMainWindow):
     """
@@ -44,7 +44,8 @@ class ProjectPlannerApp(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Project Planning & Daily Runner for ETL/MDM")
-        self.setGeometry(100, 100, 1200, 800)  # x, y, width, height
+        self.setGeometry(100, 100, 1200, 800)
+        self.showMaximized()  # Start in full screen
 
         # Initialize database and config managers
         self.db_manager: ProjectManagerDB = ProjectManagerDB()
@@ -94,6 +95,11 @@ class ProjectPlannerApp(QMainWindow):
         self.tab_widget: QTabWidget = QTabWidget()
         self.main_layout.addWidget(self.tab_widget)
 
+        # --- Project Selection Tab ---
+        self.project_selection_tab: QWidget = QWidget()
+        self.tab_widget.addTab(self.project_selection_tab, "0. Project Selection")
+        self._setup_project_selection_tab()
+
         # --- Project Setup Tab ---
         self.project_setup_tab: QWidget = QWidget()
         self.tab_widget.addTab(self.project_setup_tab, "1. Project Setup & Plan")
@@ -134,11 +140,11 @@ class ProjectPlannerApp(QMainWindow):
 
     def _show_add_epic_dialog(self) -> None:
         selected_phase_item = self.project_plan_tree.currentItem()
-        # Only auto-select the first phase if nothing is selected
-        if selected_phase_item is None:
+        if selected_phase_item is None: # type: ignore
             if self.project_plan_tree.topLevelItemCount() > 0:
-                selected_phase_item = self.project_plan_tree.topLevelItem(0)
-                if selected_phase_item is not None:
+                temp = self.project_plan_tree.topLevelItem(0)
+                if temp is not None:
+                    selected_phase_item = temp
                     self.project_plan_tree.setCurrentItem(selected_phase_item)
                 else:
                     QMessageBox.warning(self, "No Phase Available", "No phases exist. Please add a phase first.")
@@ -146,18 +152,14 @@ class ProjectPlannerApp(QMainWindow):
             else:
                 QMessageBox.warning(self, "No Phase Available", "No phases exist. Please add a phase first.")
                 return
-        # If a non-phase (i.e., an epic or task) is selected, get its parent phase
-        elif selected_phase_item.parent() is not None:
+        elif selected_phase_item.parent():
             parent = selected_phase_item
-            while parent.parent() is not None:
+            while parent.parent():
                 parent = parent.parent()
-            if parent is not None:
-                selected_phase_item = parent
-                self.project_plan_tree.setCurrentItem(selected_phase_item)
-            else:
-                QMessageBox.warning(self, "No Phase Available", "No phases exist. Please add a phase first.")
-                return
-        # Find phase by name
+            selected_phase_item = parent
+            self.project_plan_tree.setCurrentItem(selected_phase_item)
+        if selected_phase_item is None: # type: ignore
+            return
         phase_name = selected_phase_item.text(0)
         phase_id = None
         for project in self.db_manager.get_all_projects():
@@ -177,34 +179,35 @@ class ProjectPlannerApp(QMainWindow):
                 description=data["description"],
                 status=data["status"]
             )
-            # Add to UI tree
             epic_item = QTreeWidgetItem([epic.name, epic.description or "", "", epic.status, ""])
             selected_phase_item.addChild(epic_item)
             selected_phase_item.setExpanded(True)
 
     def _show_add_task_dialog(self) -> None:
         selected_epic_item = self.project_plan_tree.currentItem()
-        # Only auto-select the first epic if nothing is selected
-        if selected_epic_item is None:
-            # Try to find the first epic in the tree
+        if selected_epic_item is None: # type: ignore
+            found = False
             for i in range(self.project_plan_tree.topLevelItemCount()):
                 phase_item = self.project_plan_tree.topLevelItem(i)
                 if phase_item is not None:
                     for j in range(phase_item.childCount()):
-                        selected_epic_item = phase_item.child(j)
-                        self.project_plan_tree.setCurrentItem(selected_epic_item)
-                        break
-                break
-            else:
+                        temp = phase_item.child(j)
+                        if temp is not None: # type: ignore
+                            selected_epic_item = temp
+                            self.project_plan_tree.setCurrentItem(selected_epic_item)
+                            found = True
+                            break
+                if found:
+                    break
+            if selected_epic_item is None: # type: ignore
                 QMessageBox.warning(self, "No Epic Available", "No epics exist. Please add an epic first.")
                 return
-        # If a non-epic (i.e., a task or subtask) is selected, get its parent epic
         elif selected_epic_item.parent() and selected_epic_item.parent().parent():
-            # Climb up to the epic (the direct child of a phase)
             while selected_epic_item.parent() and selected_epic_item.parent().parent():
                 selected_epic_item = selected_epic_item.parent()
             self.project_plan_tree.setCurrentItem(selected_epic_item)
-        # Find epic by name
+        if selected_epic_item is None: # type: ignore
+            return
         epic_name = selected_epic_item.text(0)
         phase_item = selected_epic_item.parent()
         phase_name = phase_item.text(0) if phase_item else None
@@ -233,7 +236,6 @@ class ProjectPlannerApp(QMainWindow):
                 start_date=data["start_date"],
                 due_date=data["due_date"]
             )
-            # Add to UI tree
             task_item = QTreeWidgetItem([
                 task.name,
                 task.description or "",
@@ -244,11 +246,9 @@ class ProjectPlannerApp(QMainWindow):
             selected_epic_item.addChild(task_item)
             selected_epic_item.setExpanded(True)
 
-    def _setup_project_setup_tab(self) -> None:
-        """Sets up the Project Setup & Plan tab."""
-        layout: QVBoxLayout = QVBoxLayout(self.project_setup_tab)
-
-        # Project Selection / Creation Group
+    def _setup_project_selection_tab(self) -> None:
+        """Sets up the Project Selection / Creation tab."""
+        layout: QVBoxLayout = QVBoxLayout(self.project_selection_tab)
         project_selection_group: QGroupBox = QGroupBox("Select or Create Project")
         project_selection_layout: QFormLayout = QFormLayout()
         self.project_combo = QComboBox()
@@ -272,8 +272,13 @@ class ProjectPlannerApp(QMainWindow):
         project_selection_layout.addRow("", self.create_project_btn)
         project_selection_group.setLayout(project_selection_layout)
         layout.addWidget(project_selection_group)
+        layout.addStretch()
 
-        # Initial Project Plan Group
+    def _setup_project_setup_tab(self) -> None:
+        """Sets up the Project Setup & Plan tab."""
+        layout: QVBoxLayout = QVBoxLayout(self.project_setup_tab)
+
+        # Initial Project Plan Group (no project selection here now)
         plan_group: QGroupBox = QGroupBox("Project Plan Structure (Phases, Epics, Tasks)")
         plan_layout: QVBoxLayout = QVBoxLayout()
         plan_layout.addWidget(QLabel("This section allows you to define your project hierarchy."))
@@ -877,6 +882,7 @@ class TaskDialog(QDialog):
 if __name__ == "__main__":
     # Ensure a QApplication instance exists before creating QWidgets
     app: QApplication = QApplication(sys.argv)
+    app.setStyleSheet(qdarktheme.load_stylesheet("light"))
     window: ProjectPlannerApp = ProjectPlannerApp()
     window.show()
     sys.exit(app.exec())
