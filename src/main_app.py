@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QTextEdit,
+    QTextEdit, # type: ignore
     QDateEdit,
     QTabWidget,
     QFormLayout,
@@ -22,14 +22,14 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QSizePolicy,
 )
-from PySide6.QtCore import QDate, Qt
-from PySide6.QtGui import QIcon, QFont
-from PySide6.QtCore import QCoreApplication  # Explicitly import for QApplication
+from PySide6.QtCore import QDate, Qt # type: ignore
+from PySide6.QtGui import QIcon, QFont # type: ignore
+from PySide6.QtCore import QCoreApplication  # type: ignore # Explicitly import for QApplication
 
 from datetime import date, timedelta
-from typing import Optional, Dict, Tuple, Any, List
+from typing import Optional, Dict, Tuple, List 
 
-from database import ProjectManagerDB, Project, Phase, Epic, Task, SubTask, DailyLog
+from database import ProjectManagerDB, Project, Phase, Epic,  DailyLog #Task, SubTask,
 from config import ConfigManager
 
 
