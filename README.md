@@ -6,13 +6,10 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 uv venv
 .venv\Scripts\activate.bat
 uv tool install pip
-uv pip install pyside6
-uv pip install SQLAlchemy configparser pre-commit
-uv pip install black mypy
 uv pip compile --output-file=requirements.txt pyproject.toml
 uv pip install -r requirements.txt
 pre-commit install
-python src/main.py
+python src/main_app.py
 ```
 
 
@@ -34,3 +31,17 @@ Navigate to Explorer (left pane) <ctrl> E
 Close Nav pane <ctrl> b  | <ctrl> B  
 Close window <ctrl> W  
 
+# Screenshots
+
+Branch1  pic1 ![Inital home page](readme-res/pics/ini-home-pg.png)  
+
+# Branches
+
+## Branch 001
+```text
+    commit msg: done- good state, close branch 001
+    code written by Google Gemini. the prompt file is not uploaded to this project here.
+    it did a decent job.
+    to fix: the Add Phase, Add Epic and Add Task are not showing a dialog box to add the item name, desc, assigned to, status and due date
+        once the user adds the inputs, it should add it to the approp hierarchy and persist to the DB
+```
