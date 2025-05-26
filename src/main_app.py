@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
+    QHBoxLayout, # type: ignore
     QLabel,
     QLineEdit,
     QPushButton,
@@ -13,14 +13,14 @@ from PySide6.QtWidgets import (
     QDateEdit,
     QTabWidget,
     QFormLayout,
-    QGroupBox,
+    QGroupBox, # type: ignore
     QComboBox,
     QPlainTextEdit,
     QMessageBox,
     QTreeWidget,
     QTreeWidgetItem,
-    QHeaderView,
-    QSizePolicy,
+    QHeaderView, # type: ignore
+    QSizePolicy, # type: ignore
     QDialog,
     QDialogButtonBox,
 )
@@ -28,13 +28,14 @@ from PySide6.QtCore import QDate, Qt # type: ignore
 from PySide6.QtGui import QIcon, QFont # type: ignore
 from PySide6.QtCore import QCoreApplication  # type: ignore # Explicitly import for QApplication
 
-from datetime import date, timedelta
+from datetime import date, timedelta # type: ignore
 from typing import Optional, Dict, Tuple, List, Any
 
-from database import ProjectManagerDB, Project, Phase, Epic,  DailyLog #Task, SubTask,
+from database import ProjectManagerDB, Project, Phase, Epic,  DailyLog # type: ignore #Task, SubTask,
 from config import ConfigManager
 import qdarktheme # type: ignore 
 from PySide6.QtGui import QKeySequence, QShortcut
+from utils.main_helper import add_initial_project_plan # type: ignore
 
 from tabs.tab_project_selection import ProjectSelectionTab # type: ignore
 from tabs.tab_project_setup import ProjectSetupTab # type: ignore
@@ -182,7 +183,7 @@ class ProjectPlannerApp(QMainWindow):
         self.project_setup_tab.add_task_btn.clicked.disconnect()
         self.project_setup_tab.add_task_btn.clicked.connect(self._show_add_task_dialog)
         self.project_setup_tab.add_initial_plan_btn.clicked.disconnect()
-        self.project_setup_tab.add_initial_plan_btn.clicked.connect(self._add_initial_project_plan)
+        self.project_setup_tab.add_initial_plan_btn.clicked.connect(lambda: add_initial_project_plan(self))
         # Daily Runner Tab
         self.daily_runner_tab.current_log_date_display.dateChanged.disconnect()
         self.daily_runner_tab.current_log_date_display.dateChanged.connect(self._update_log_date_from_tab)
@@ -481,140 +482,6 @@ class ProjectPlannerApp(QMainWindow):
                         )
         session.close()
         self.project_plan_tree.expandAll() # Expand all items for better visibility
-
-    def _add_initial_project_plan(self) -> None:
-        """
-        Auto-populates the selected project with a default plan structure
-        based on the project description and config settings.
-        """
-        if self._current_project_id is None:
-            QMessageBox.warning(self, "No Project Selected", "Please select or create a project first.")
-            return
-
-        project: Optional[Project] = self.db_manager.get_project_by_name(self.project_combo.currentText())
-        if not project:
-            QMessageBox.critical(self, "Error", "Selected project not found in database.")
-            return
-
-        reply: QMessageBox.StandardButton = QMessageBox.question(self, "Confirm Auto-Populate",
-                                         "This will add a default plan structure (Phases, Epics, Tasks) to the current project. Continue?",
-                                         QMessageBox.Yes | QMessageBox.No) # type: ignore
-        if reply == QMessageBox.No: # type: ignore
-            return
-
-        try:
-            ssa1_name: Optional[str] = self.config_manager.get_property('TEAM_MEMBERS', 'SSA1_Name')
-            sa2_name: Optional[str] = self.config_manager.get_property('TEAM_MEMBERS', 'SA2_Name')
-            offshore_pm_name: Optional[str] = self.config_manager.get_property('TEAM_MEMBERS', 'Offshore_PM_Name')
-
-            # Provide default empty strings if names are None from config
-            ssa1_name_str: str = ssa1_name if ssa1_name is not None else "SSA1"
-            sa2_name_str: str = sa2_name if sa2_name is not None else "SA2"
-            offshore_pm_name_str: str = offshore_pm_name if offshore_pm_name is not None else "Offshore PM"
-
-
-            # Phase 1: Inception & Detailed Planning (Weeks 1-4)
-            phase1: Phase = self.db_manager.add_phase(
-                project.id,
-                "Phase 1: Inception & Detailed Planning (Weeks 1-4)",
-                "Establish foundational understanding, detailed requirements, and initial design for key modules.",
-                start_date=project.start_date,
-                end_date=project.start_date + timedelta(weeks=4)
-            )
-            epic1_1: Epic = self.db_manager.add_epic(
-                phase1.id,
-                "Requirements Gathering & Reverse Engineering",
-                "Gather business & technical requirements, reverse engineer vendor product.",
-            )
-            self.db_manager.add_task(
-                epic1_1.id,
-                "Client Kick-off & Expectations Alignment",
-                "Formal kick-off with client to align on scope and communication.",
-                ssa1_name_str,
-                "High",
-                due_date=project.start_date + timedelta(days=3),
-            )
-            self.db_manager.add_task(
-                epic1_1.id,
-                "Vendor Product Architecture Deep Dive",
-                "Dissect existing on-prem MDM product for architecture, APIs, and customization points.",
-                f"{ssa1_name_str}, {sa2_name_str}",
-                "High",
-                due_date=project.start_date + timedelta(days=7),
-            )
-            self.db_manager.add_task(
-                epic1_1.id,
-                "Detailed MDM Customization Requirements",
-                "Workshops with client BAs for data quality, validations, UI, RBAC.",
-                ssa1_name_str,
-                "High",
-                due_date=project.start_date + timedelta(days=14),
-            )
-            self.db_manager.add_task(
-                epic1_1.id,
-                "Ingress Source System Data Mapping (Initial 5)",
-                "Detailed data mapping for the first 5 critical ingress sources.",
-                sa2_name_str,
-                "High",
-                due_date=project.start_date + timedelta(days=14),
-            )
-
-            epic1_2: Epic = self.db_manager.add_epic(phase1.id, "Technical Design & Initial POCs", "Develop overall architectural design and conduct critical proof of concepts.")
-            self.db_manager.add_task(epic1_2.id, "Overall ETL/MDM Solution Architecture", "Design the end-to-end architecture for Ingress, MDM, and Egress.", ssa1_name_str, 'High', due_date=project.start_date + timedelta(days=21))
-            self.db_manager.add_task(epic1_2.id, "MDM Customization Framework POC", "Prove out a customization approach for the vendor MDM product.", sa2_name_str, 'High', due_date=project.start_date + timedelta(days=21))
-            self.db_manager.add_task(epic1_2.id, "Ingress Data Pipeline POC (Connector)", "Validate connectivity and initial data extraction from a complex source.", sa2_name_str, 'Medium', due_date=project.start_date + timedelta(days=28))
-            self.db_manager.add_task(epic1_2.id, "Offshore Team Onboarding & Environment Setup", "Ensure offshore team has access, tools, and dev environments ready.", offshore_pm_name_str, 'High', due_date=project.start_date + timedelta(days=28))
-
-
-            # Phase 2: Iterative Development & Delivery (Months 2-6)
-            phase2: Phase = self.db_manager.add_phase(
-                project.id,
-                "Phase 2: Iterative Development & Delivery (Months 2-6)",
-                "Develop, unit test, and deliver functional modules in iterations.",
-                start_date=project.start_date + timedelta(weeks=4),
-                end_date=project.start_date + timedelta(weeks=4 + 5*4) # 5 months
-            )
-            epic2_1: Epic = self.db_manager.add_epic(phase2.id, "Ingress Module Development", "Develop data pipelines for 20 source systems into MDM.")
-            self.db_manager.add_task(epic2_1.id, "Ingress Source 1-5 Development & Unit Test", "Develop and unit test pipelines for first 5 critical sources.", offshore_pm_name_str + ' (Offshore Team)', 'High')
-            self.db_manager.add_task(epic2_1.id, "Ingress Source 6-10 Development & Unit Test", "Develop and unit test pipelines for next 5 critical sources.", offshore_pm_name_str + ' (Offshore Team)', 'Medium')
-            self.db_manager.add_task(epic2_1.id, "Ingress Source 11-20 Development & Unit Test", "Develop and unit test pipelines for remaining sources.", offshore_pm_name_str + ' (Offshore Team)', 'Low')
-            self.db_manager.add_task(epic2_1.id, "Ingress Data Quality & Error Handling", "Implement robust data quality checks and error logging for all pipelines.", sa2_name_str, 'High')
-
-            epic2_2: Epic = self.db_manager.add_epic(phase2.id, "Egress Module Development", "Pull data from CRM, identify deltas, and write to CSV files.")
-            self.db_manager.add_task(epic2_2.id, "Egress CRM Data Extraction Design", "Design efficient extraction of CRM data.", sa2_name_str, 'High')
-            self.db_manager.add_task(epic2_2.id, "Egress Delta Logic Implementation", "Implement logic to identify and process data deltas.", offshore_pm_name_str + ' (Offshore Team)', 'High')
-            self.db_manager.add_task(epic2_2.id, "Egress CSV File Generation", "Develop module to generate formatted CSV files.", offshore_pm_name_str + ' (Offshore Team)', 'Medium')
-
-            epic2_3: Epic = self.db_manager.add_epic(phase2.id, "MDM Customization & Configuration", "Implement Data Quality, Validations, UI, RBAC based on requirements.")
-            self.db_manager.add_task(epic2_3.id, "MDM Data Quality Rules Implementation", "Implement core data quality rules within MDM.", offshore_pm_name_str + ' (Offshore Team)', 'High')
-            self.db_manager.add_task(epic2_3.id, "MDM Data Validation Logic", "Implement custom data validation rules.", offshore_pm_name_str + ' (Offshore Team)', 'High')
-            self.db_manager.add_task(epic2_3.id, "MDM UI Customization (Key Screens)", "Customize essential UI screens for data stewardship.", offshore_pm_name_str + ' (Offshore Team)', 'Medium')
-            self.db_manager.add_task(epic2_3.id, "MDM RBAC Configuration & Testing", "Configure Role-Based Access Control and test permissions.", sa2_name_str, 'High')
-            self.db_manager.add_task(epic2_3.id, "MDM Workflow Customization (if applicable)", "Customize data approval/stewardship workflows.", offshore_pm_name_str + ' (Offshore Team)', 'Medium')
-
-            # Phase 3: UAT & Deployment Readiness (Month 7)
-            phase3: Phase = self.db_manager.add_phase(
-                project.id,
-                "Phase 3: UAT & Deployment Readiness (Month 7)",
-                "Achieve client sign-off on functionality, prepare for production deployment.",
-                start_date=project.start_date + timedelta(weeks=4 + 5*4),
-                end_date=project.end_date_target
-            )
-            epic3_1: Epic = self.db_manager.add_epic(phase3.id, "User Acceptance Testing (UAT)", "Client-led testing and defect resolution.")
-            self.db_manager.add_task(epic3_1.id, "UAT Test Case Review & Preparation", "Work with client BAs to finalize UAT test cases.", ssa1_name_str, 'High')
-            self.db_manager.add_task(epic3_1.id, "UAT Environment Setup & Data Load", "Prepare and load data into UAT environment.", sa2_name_str, 'High')
-            self.db_manager.add_task(epic3_1.id, "UAT Defect Triage & Resolution Cycles", "Manage, prioritize, and resolve defects found during UAT.", f"{offshore_pm_name_str} (Offshore Team), {ssa1_name_str}", 'High')
-
-            epic3_2: Epic = self.db_manager.add_epic(phase3.id, "Deployment Readiness & Go-Live", "Final preparations for production deployment.")
-            self.db_manager.add_task(epic3_2.id, "Production Deployment Plan", "Develop detailed plan including rollback strategy.", ssa1_name_str, 'High')
-            self.db_manager.add_task(epic3_2.id, "Pre-Go-Live System Health Checks", "Perform final checks on performance, data integrity.", sa2_name_str, 'High')
-            self.db_manager.add_task(epic3_2.id, "Post-Go-Live Support Plan", "Define support structure for immediate post-deployment.", ssa1_name_str, 'High')
-
-            QMessageBox.information(self, "Success", "Initial project plan (Phases, Epics, Tasks) added successfully!")
-            self._load_project_plan_tree() # Refresh the tree view
-        except Exception as e:
-            QMessageBox.critical(self, "Error Adding Plan", f"Failed to add initial plan: {e}")
-            # Optionally, you might want to rollback changes if multiple DB operations fail
 
     def _submit_daily_log(self) -> None:
         """Submits the daily log entry to the database."""
