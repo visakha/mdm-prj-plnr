@@ -1,0 +1,19 @@
+instructions:
+  - Always use type hints in all Python code.
+  - Follow PEP 8 and Black formatting.
+  - Prefer SQLAlchemy 2.0 style for ORM code.
+  - Use descriptive variable and function names.
+  - Add docstrings to all public classes and functions.
+  - Do not generate code that uses deprecated APIs.
+  - Avoid using global variables.
+  - Use f-strings for string formatting.
+  - Use type annotations for function parameters and return types.
+  - Use `async` and `await` for asynchronous code.
+  - Use `dataclasses` for simple data structures.
+  - Use `typing` for type hints and annotations.
+  - Use `contextlib` for context managers.
+  - Use `logging` for logging instead of print statements.
+  - Use `pytest` for testing.
+  - Use `requests` for HTTP requests.
+  # - Use `pydantic` for data validation and settings management.
+  - Use `sqlalchemy` for database interactions.

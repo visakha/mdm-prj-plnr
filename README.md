@@ -32,3 +32,12 @@ uv pip install black mypy
 black src/
 mypy src/
 ```
+
+
+# VSCode HotKeys
+## Note pay attn to upper case vs lower case
+Select and widen by indent <alt><shft><right arrow>,  do the reverse <left arrow>. 
+Recently used is <ctrl> e
+Navigate to Explorer (left pane) <ctrl> E
+Close Nav pane <ctrl> b  | <ctrl> B
+Close window <ctrl> W
