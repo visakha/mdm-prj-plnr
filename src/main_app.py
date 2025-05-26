@@ -112,6 +112,18 @@ class ProjectPlannerApp(QMainWindow):
         self.tab_widget.addTab(self.view_logs_tab, "4. View Daily Logs")
         self._setup_view_logs_tab()
 
+    def _show_add_phase_dialog(self) -> None:
+        """Placeholder for Add Phase dialog (not yet implemented)."""
+        QMessageBox.information(self, "Not Implemented", "Add Phase dialog is not implemented yet.")
+
+    def _show_add_epic_dialog(self) -> None:
+        """Placeholder for Add Epic dialog (not yet implemented)."""
+        QMessageBox.information(self, "Not Implemented", "Add Epic dialog is not implemented yet.")
+
+    def _show_add_task_dialog(self) -> None:
+        """Placeholder for Add Task dialog (not yet implemented)."""
+        QMessageBox.information(self, "Not Implemented", "Add Task dialog is not implemented yet.")
+
     def _setup_project_setup_tab(self) -> None:
         """Sets up the Project Setup & Plan tab."""
         layout: QVBoxLayout = QVBoxLayout(self.project_setup_tab)
@@ -157,9 +169,18 @@ class ProjectPlannerApp(QMainWindow):
 
         # Buttons for adding plan elements (currently placeholder, auto-populate used)
         plan_buttons_layout: QHBoxLayout = QHBoxLayout()
+        # Add Phase Button
         self.add_phase_btn = QPushButton("Add Phase")
+        self.add_phase_btn.clicked.connect(self._show_add_phase_dialog)
+
+        # Add Epic Button
         self.add_epic_btn = QPushButton("Add Epic")
+        self.add_epic_btn.clicked.connect(self._show_add_epic_dialog)
+
+        # Add Task Button
         self.add_task_btn = QPushButton("Add Task")
+        self.add_task_btn.clicked.connect(self._show_add_task_dialog)
+        
         self.add_initial_plan_btn = QPushButton("Auto-Populate Project Plan")
         self.add_initial_plan_btn.clicked.connect(self._add_initial_project_plan)
 
