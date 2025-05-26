@@ -134,9 +134,29 @@ class ProjectPlannerApp(QMainWindow):
 
     def _show_add_epic_dialog(self) -> None:
         selected_phase_item = self.project_plan_tree.currentItem()
-        if selected_phase_item is None or selected_phase_item.parent() is not None: # type: ignore
-            QMessageBox.warning(self, "No Phase Selected", "Please select a phase to add an epic.")
-            return
+        # Only auto-select the first phase if nothing is selected
+        if selected_phase_item is None:
+            if self.project_plan_tree.topLevelItemCount() > 0:
+                selected_phase_item = self.project_plan_tree.topLevelItem(0)
+                if selected_phase_item is not None:
+                    self.project_plan_tree.setCurrentItem(selected_phase_item)
+                else:
+                    QMessageBox.warning(self, "No Phase Available", "No phases exist. Please add a phase first.")
+                    return
+            else:
+                QMessageBox.warning(self, "No Phase Available", "No phases exist. Please add a phase first.")
+                return
+        # If a non-phase (i.e., an epic or task) is selected, get its parent phase
+        elif selected_phase_item.parent() is not None:
+            parent = selected_phase_item
+            while parent.parent() is not None:
+                parent = parent.parent()
+            if parent is not None:
+                selected_phase_item = parent
+                self.project_plan_tree.setCurrentItem(selected_phase_item)
+            else:
+                QMessageBox.warning(self, "No Phase Available", "No phases exist. Please add a phase first.")
+                return
         # Find phase by name
         phase_name = selected_phase_item.text(0)
         phase_id = None
@@ -164,12 +184,28 @@ class ProjectPlannerApp(QMainWindow):
 
     def _show_add_task_dialog(self) -> None:
         selected_epic_item = self.project_plan_tree.currentItem()
-        if not selected_epic_item or selected_epic_item.parent() is None: # type: ignore
-            QMessageBox.warning(self, "No Epic Selected", "Please select an epic to add a task.")
-            return
+        # Only auto-select the first epic if nothing is selected
+        if selected_epic_item is None:
+            # Try to find the first epic in the tree
+            for i in range(self.project_plan_tree.topLevelItemCount()):
+                phase_item = self.project_plan_tree.topLevelItem(i)
+                if phase_item is not None:
+                    for j in range(phase_item.childCount()):
+                        selected_epic_item = phase_item.child(j)
+                        self.project_plan_tree.setCurrentItem(selected_epic_item)
+                        break
+                break
+            else:
+                QMessageBox.warning(self, "No Epic Available", "No epics exist. Please add an epic first.")
+                return
+        # If a non-epic (i.e., a task or subtask) is selected, get its parent epic
+        elif selected_epic_item.parent() and selected_epic_item.parent().parent():
+            # Climb up to the epic (the direct child of a phase)
+            while selected_epic_item.parent() and selected_epic_item.parent().parent():
+                selected_epic_item = selected_epic_item.parent()
+            self.project_plan_tree.setCurrentItem(selected_epic_item)
         # Find epic by name
         epic_name = selected_epic_item.text(0)
-        # Traverse tree to get phase name
         phase_item = selected_epic_item.parent()
         phase_name = phase_item.text(0) if phase_item else None
         epic_id = None

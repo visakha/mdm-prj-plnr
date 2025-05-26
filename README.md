@@ -48,8 +48,16 @@ Branch1  pic1 ![Inital home page](readme-res/pics/ini-home-pg.png)
 
 ## Branch 002
 ```text
-    prompt: 
+prompts: 
+        
     modify the functionality of the buttons Add Phase, Add Epic and Add Task. these buttons should open a dialog box for the task
-        The shape of the task is same as the Model Task
-        once the user adds the inputs the task, it should add it to the appropriate hierarchy and persist to the DB
+    The shape of the task is same as the Model Task
+    once the user adds the inputs the task, it should add it to the appropriate hierarchy and persist to the DB
+
+    great, nice work,  now I want you to auto select the parent Phase when the add Epic button is clicked
+    
+    when a task or epic is highlighted and then the epic button is click the focus is moving from the current selection to the very first in the Hierarchry, can you fix this
+
+    great, nice work,  now I want you to auto select the parent Epic when the add task button is clicked
+
 ```
