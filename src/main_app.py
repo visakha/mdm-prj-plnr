@@ -252,10 +252,10 @@ class ProjectPlannerApp(QMainWindow):
 
         # Load all properties from config and add to form
         for section in self.config_manager.config.sections():
-            group_box: QGroupBox = QGroupBox(section.replace("_", " ").title())
+            group_box: QGroupBox = QGroupBox(section.replace('_', ' ').title())
             group_layout: QFormLayout = QFormLayout()
             for key, value in self.config_manager.config.items(section):
-                label: QLabel = QLabel(key.replace("_", " ").title() + ":")
+                label: QLabel = QLabel(key.replace('_', ' ').title() + ":")
                 input_field: QLineEdit = QLineEdit(value)
                 group_layout.addRow(label, input_field)
                 self.property_inputs[(section, key)] = input_field
@@ -283,9 +283,7 @@ class ProjectPlannerApp(QMainWindow):
 
         self.daily_logs_display = QPlainTextEdit()
         self.daily_logs_display.setReadOnly(True)
-        self.daily_logs_display.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        self.daily_logs_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(self.daily_logs_display)
 
     # --- Core Logic Methods ---
@@ -306,7 +304,7 @@ class ProjectPlannerApp(QMainWindow):
             self.log_project_combo.setEnabled(False)
             self._current_project_id = None
             self.current_project_label.setText("Current Project: <None Selected>")
-            self.project_plan_tree.clear()  # Clear tree if no projects
+            self.project_plan_tree.clear() # Clear tree if no projects
         else:
             self.project_combo.setEnabled(True)
             self.log_project_combo.setEnabled(True)
@@ -314,7 +312,7 @@ class ProjectPlannerApp(QMainWindow):
                 self.project_combo.addItem(project.name, userData=project.id)
                 self.log_project_combo.addItem(project.name, userData=project.id)
             # Set initial selection to the first project if available
-            self.project_combo.setCurrentIndex(0)  # Triggers _on_project_selected
+            self.project_combo.setCurrentIndex(0) # Triggers _on_project_selected
             # The _on_project_selected will handle setting _current_project_id and loading plan/logs
 
     def _on_project_selected(self) -> None:
@@ -322,21 +320,19 @@ class ProjectPlannerApp(QMainWindow):
         project_id: Optional[int] = self.project_combo.currentData()
         if project_id is not None:
             self._current_project_id = project_id
-            self.current_project_label.setText(
-                f"Current Project: {self.project_combo.currentText()}"
-            )
-            self._load_project_plan_tree()  # Load plan for the newly selected project
+            self.current_project_label.setText(f"Current Project: {self.project_combo.currentText()}")
+            self._load_project_plan_tree() # Load plan for the newly selected project
             # Ensure the log combo also reflects the current project
             if self.log_project_combo.currentData() != project_id:
                 index: int = self.log_project_combo.findData(project_id)
                 if index != -1:
                     self.log_project_combo.setCurrentIndex(index)
             else:
-                self._load_daily_logs_display()  # Reload logs if it's the same project
+                self._load_daily_logs_display() # Reload logs if it's the same project
         else:
             self._current_project_id = None
             self.current_project_label.setText("Current Project: <None Selected>")
-            self.project_plan_tree.clear()  # Clear tree if no project is selected
+            self.project_plan_tree.clear() # Clear tree if no project is selected
 
     def _create_new_project(self) -> None:
         """Creates a new project based on user input."""
@@ -349,26 +345,18 @@ class ProjectPlannerApp(QMainWindow):
             return
 
         start_date_py: date = date(start_date_q.year(), start_date_q.month(), start_date_q.day())
-        end_date_target_py: date = date(
-            end_date_target_q.year(), end_date_target_q.month(), end_date_target_q.day()
-        )
+        end_date_target_py: date = date(end_date_target_q.year(), end_date_target_q.month(), end_date_target_q.day())
 
         existing_project: Optional[Project] = self.db_manager.get_project_by_name(name)
         if existing_project:
-            QMessageBox.warning(
-                self, "Duplicate Project", f"Project with name '{name}' already exists."
-            )
+            QMessageBox.warning(self, "Duplicate Project", f"Project with name '{name}' already exists.")
             return
 
         try:
-            project: Project = self.db_manager.create_project(
-                name, start_date_py, end_date_target_py
-            )
-            QMessageBox.information(
-                self, "Success", f"Project '{project.name}' created successfully!"
-            )
+            project: Project = self.db_manager.create_project(name, start_date_py, end_date_target_py)
+            QMessageBox.information(self, "Success", f"Project '{project.name}' created successfully!")
             self.project_name_input.clear()
-            self._populate_project_combos()  # Refresh combos and select new project
+            self._populate_project_combos() # Refresh combos and select new project
         except Exception as e:
             QMessageBox.critical(self, "Database Error", f"Failed to create project: {e}")
 
@@ -402,7 +390,7 @@ class ProjectPlannerApp(QMainWindow):
                         [task.name, task.description, task.assigned_to, task.status, task_due_date],
                     )
                     for subtask in task.subtasks:
-                        subtask_item: QTreeWidgetItem = QTreeWidgetItem(
+                        subtask_item: QTreeWidgetItem = QTreeWidgetItem( # type: ignore
                             task_item,
                             [
                                 subtask.name,
@@ -413,7 +401,7 @@ class ProjectPlannerApp(QMainWindow):
                             ],
                         )
         session.close()
-        self.project_plan_tree.expandAll()  # Expand all items for better visibility
+        self.project_plan_tree.expandAll() # Expand all items for better visibility
 
     def _add_initial_project_plan(self) -> None:
         """
@@ -421,40 +409,30 @@ class ProjectPlannerApp(QMainWindow):
         based on the project description and config settings.
         """
         if self._current_project_id is None:
-            QMessageBox.warning(
-                self, "No Project Selected", "Please select or create a project first."
-            )
+            QMessageBox.warning(self, "No Project Selected", "Please select or create a project first.")
             return
 
-        project: Optional[Project] = self.db_manager.get_project_by_name(
-            self.project_combo.currentText()
-        )
+        project: Optional[Project] = self.db_manager.get_project_by_name(self.project_combo.currentText())
         if not project:
             QMessageBox.critical(self, "Error", "Selected project not found in database.")
             return
 
-        reply: QMessageBox.StandardButton = QMessageBox.question(
-            self,
-            "Confirm Auto-Populate",
-            "This will add a default plan structure (Phases, Epics, Tasks) to the current project. Continue?",
-            QMessageBox.Yes | QMessageBox.No,
-        )
-        if reply == QMessageBox.No:
+        reply: QMessageBox.StandardButton = QMessageBox.question(self, "Confirm Auto-Populate",
+                                         "This will add a default plan structure (Phases, Epics, Tasks) to the current project. Continue?",
+                                         QMessageBox.Yes | QMessageBox.No) # type: ignore
+        if reply == QMessageBox.No: # type: ignore
             return
 
         try:
-            ssa1_name: Optional[str] = self.config_manager.get_property("TEAM_MEMBERS", "SSA1_Name")
-            sa2_name: Optional[str] = self.config_manager.get_property("TEAM_MEMBERS", "SA2_Name")
-            offshore_pm_name: Optional[str] = self.config_manager.get_property(
-                "TEAM_MEMBERS", "Offshore_PM_Name"
-            )
+            ssa1_name: Optional[str] = self.config_manager.get_property('TEAM_MEMBERS', 'SSA1_Name')
+            sa2_name: Optional[str] = self.config_manager.get_property('TEAM_MEMBERS', 'SA2_Name')
+            offshore_pm_name: Optional[str] = self.config_manager.get_property('TEAM_MEMBERS', 'Offshore_PM_Name')
 
             # Provide default empty strings if names are None from config
             ssa1_name_str: str = ssa1_name if ssa1_name is not None else "SSA1"
             sa2_name_str: str = sa2_name if sa2_name is not None else "SA2"
-            offshore_pm_name_str: str = (
-                offshore_pm_name if offshore_pm_name is not None else "Offshore PM"
-            )
+            offshore_pm_name_str: str = offshore_pm_name if offshore_pm_name is not None else "Offshore PM"
+
 
             # Phase 1: Inception & Detailed Planning (Weeks 1-4)
             phase1: Phase = self.db_manager.add_phase(
@@ -462,7 +440,7 @@ class ProjectPlannerApp(QMainWindow):
                 "Phase 1: Inception & Detailed Planning (Weeks 1-4)",
                 "Establish foundational understanding, detailed requirements, and initial design for key modules.",
                 start_date=project.start_date,
-                end_date=project.start_date + timedelta(weeks=4),
+                end_date=project.start_date + timedelta(weeks=4)
             )
             epic1_1: Epic = self.db_manager.add_epic(
                 phase1.id,
@@ -502,43 +480,12 @@ class ProjectPlannerApp(QMainWindow):
                 due_date=project.start_date + timedelta(days=14),
             )
 
-            epic1_2: Epic = self.db_manager.add_epic(
-                phase1.id,
-                "Technical Design & Initial POCs",
-                "Develop overall architectural design and conduct critical proof of concepts.",
-            )
-            self.db_manager.add_task(
-                epic1_2.id,
-                "Overall ETL/MDM Solution Architecture",
-                "Design the end-to-end architecture for Ingress, MDM, and Egress.",
-                ssa1_name_str,
-                "High",
-                due_date=project.start_date + timedelta(days=21),
-            )
-            self.db_manager.add_task(
-                epic1_2.id,
-                "MDM Customization Framework POC",
-                "Prove out a customization approach for the vendor MDM product.",
-                sa2_name_str,
-                "High",
-                due_date=project.start_date + timedelta(days=21),
-            )
-            self.db_manager.add_task(
-                epic1_2.id,
-                "Ingress Data Pipeline POC (Connector)",
-                "Validate connectivity and initial data extraction from a complex source.",
-                sa2_name_str,
-                "Medium",
-                due_date=project.start_date + timedelta(days=28),
-            )
-            self.db_manager.add_task(
-                epic1_2.id,
-                "Offshore Team Onboarding & Environment Setup",
-                "Ensure offshore team has access, tools, and dev environments ready.",
-                offshore_pm_name_str,
-                "High",
-                due_date=project.start_date + timedelta(days=28),
-            )
+            epic1_2: Epic = self.db_manager.add_epic(phase1.id, "Technical Design & Initial POCs", "Develop overall architectural design and conduct critical proof of concepts.")
+            self.db_manager.add_task(epic1_2.id, "Overall ETL/MDM Solution Architecture", "Design the end-to-end architecture for Ingress, MDM, and Egress.", ssa1_name_str, 'High', due_date=project.start_date + timedelta(days=21))
+            self.db_manager.add_task(epic1_2.id, "MDM Customization Framework POC", "Prove out a customization approach for the vendor MDM product.", sa2_name_str, 'High', due_date=project.start_date + timedelta(days=21))
+            self.db_manager.add_task(epic1_2.id, "Ingress Data Pipeline POC (Connector)", "Validate connectivity and initial data extraction from a complex source.", sa2_name_str, 'Medium', due_date=project.start_date + timedelta(days=28))
+            self.db_manager.add_task(epic1_2.id, "Offshore Team Onboarding & Environment Setup", "Ensure offshore team has access, tools, and dev environments ready.", offshore_pm_name_str, 'High', due_date=project.start_date + timedelta(days=28))
+
 
             # Phase 2: Iterative Development & Delivery (Months 2-6)
             phase2: Phase = self.db_manager.add_phase(
@@ -546,176 +493,46 @@ class ProjectPlannerApp(QMainWindow):
                 "Phase 2: Iterative Development & Delivery (Months 2-6)",
                 "Develop, unit test, and deliver functional modules in iterations.",
                 start_date=project.start_date + timedelta(weeks=4),
-                end_date=project.start_date + timedelta(weeks=4 + 5 * 4),  # 5 months
+                end_date=project.start_date + timedelta(weeks=4 + 5*4) # 5 months
             )
-            epic2_1: Epic = self.db_manager.add_epic(
-                phase2.id,
-                "Ingress Module Development",
-                "Develop data pipelines for 20 source systems into MDM.",
-            )
-            self.db_manager.add_task(
-                epic2_1.id,
-                "Ingress Source 1-5 Development & Unit Test",
-                "Develop and unit test pipelines for first 5 critical sources.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "High",
-            )
-            self.db_manager.add_task(
-                epic2_1.id,
-                "Ingress Source 6-10 Development & Unit Test",
-                "Develop and unit test pipelines for next 5 critical sources.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "Medium",
-            )
-            self.db_manager.add_task(
-                epic2_1.id,
-                "Ingress Source 11-20 Development & Unit Test",
-                "Develop and unit test pipelines for remaining sources.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "Low",
-            )
-            self.db_manager.add_task(
-                epic2_1.id,
-                "Ingress Data Quality & Error Handling",
-                "Implement robust data quality checks and error logging for all pipelines.",
-                sa2_name_str,
-                "High",
-            )
+            epic2_1: Epic = self.db_manager.add_epic(phase2.id, "Ingress Module Development", "Develop data pipelines for 20 source systems into MDM.")
+            self.db_manager.add_task(epic2_1.id, "Ingress Source 1-5 Development & Unit Test", "Develop and unit test pipelines for first 5 critical sources.", offshore_pm_name_str + ' (Offshore Team)', 'High')
+            self.db_manager.add_task(epic2_1.id, "Ingress Source 6-10 Development & Unit Test", "Develop and unit test pipelines for next 5 critical sources.", offshore_pm_name_str + ' (Offshore Team)', 'Medium')
+            self.db_manager.add_task(epic2_1.id, "Ingress Source 11-20 Development & Unit Test", "Develop and unit test pipelines for remaining sources.", offshore_pm_name_str + ' (Offshore Team)', 'Low')
+            self.db_manager.add_task(epic2_1.id, "Ingress Data Quality & Error Handling", "Implement robust data quality checks and error logging for all pipelines.", sa2_name_str, 'High')
 
-            epic2_2: Epic = self.db_manager.add_epic(
-                phase2.id,
-                "Egress Module Development",
-                "Pull data from CRM, identify deltas, and write to CSV files.",
-            )
-            self.db_manager.add_task(
-                epic2_2.id,
-                "Egress CRM Data Extraction Design",
-                "Design efficient extraction of CRM data.",
-                sa2_name_str,
-                "High",
-            )
-            self.db_manager.add_task(
-                epic2_2.id,
-                "Egress Delta Logic Implementation",
-                "Implement logic to identify and process data deltas.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "High",
-            )
-            self.db_manager.add_task(
-                epic2_2.id,
-                "Egress CSV File Generation",
-                "Develop module to generate formatted CSV files.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "Medium",
-            )
+            epic2_2: Epic = self.db_manager.add_epic(phase2.id, "Egress Module Development", "Pull data from CRM, identify deltas, and write to CSV files.")
+            self.db_manager.add_task(epic2_2.id, "Egress CRM Data Extraction Design", "Design efficient extraction of CRM data.", sa2_name_str, 'High')
+            self.db_manager.add_task(epic2_2.id, "Egress Delta Logic Implementation", "Implement logic to identify and process data deltas.", offshore_pm_name_str + ' (Offshore Team)', 'High')
+            self.db_manager.add_task(epic2_2.id, "Egress CSV File Generation", "Develop module to generate formatted CSV files.", offshore_pm_name_str + ' (Offshore Team)', 'Medium')
 
-            epic2_3: Epic = self.db_manager.add_epic(
-                phase2.id,
-                "MDM Customization & Configuration",
-                "Implement Data Quality, Validations, UI, RBAC based on requirements.",
-            )
-            self.db_manager.add_task(
-                epic2_3.id,
-                "MDM Data Quality Rules Implementation",
-                "Implement core data quality rules within MDM.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "High",
-            )
-            self.db_manager.add_task(
-                epic2_3.id,
-                "MDM Data Validation Logic",
-                "Implement custom data validation rules.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "High",
-            )
-            self.db_manager.add_task(
-                epic2_3.id,
-                "MDM UI Customization (Key Screens)",
-                "Customize essential UI screens for data stewardship.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "Medium",
-            )
-            self.db_manager.add_task(
-                epic2_3.id,
-                "MDM RBAC Configuration & Testing",
-                "Configure Role-Based Access Control and test permissions.",
-                sa2_name_str,
-                "High",
-            )
-            self.db_manager.add_task(
-                epic2_3.id,
-                "MDM Workflow Customization (if applicable)",
-                "Customize data approval/stewardship workflows.",
-                offshore_pm_name_str + " (Offshore Team)",
-                "Medium",
-            )
+            epic2_3: Epic = self.db_manager.add_epic(phase2.id, "MDM Customization & Configuration", "Implement Data Quality, Validations, UI, RBAC based on requirements.")
+            self.db_manager.add_task(epic2_3.id, "MDM Data Quality Rules Implementation", "Implement core data quality rules within MDM.", offshore_pm_name_str + ' (Offshore Team)', 'High')
+            self.db_manager.add_task(epic2_3.id, "MDM Data Validation Logic", "Implement custom data validation rules.", offshore_pm_name_str + ' (Offshore Team)', 'High')
+            self.db_manager.add_task(epic2_3.id, "MDM UI Customization (Key Screens)", "Customize essential UI screens for data stewardship.", offshore_pm_name_str + ' (Offshore Team)', 'Medium')
+            self.db_manager.add_task(epic2_3.id, "MDM RBAC Configuration & Testing", "Configure Role-Based Access Control and test permissions.", sa2_name_str, 'High')
+            self.db_manager.add_task(epic2_3.id, "MDM Workflow Customization (if applicable)", "Customize data approval/stewardship workflows.", offshore_pm_name_str + ' (Offshore Team)', 'Medium')
 
             # Phase 3: UAT & Deployment Readiness (Month 7)
             phase3: Phase = self.db_manager.add_phase(
                 project.id,
                 "Phase 3: UAT & Deployment Readiness (Month 7)",
                 "Achieve client sign-off on functionality, prepare for production deployment.",
-                start_date=project.start_date + timedelta(weeks=4 + 5 * 4),
-                end_date=project.end_date_target,
+                start_date=project.start_date + timedelta(weeks=4 + 5*4),
+                end_date=project.end_date_target
             )
-            epic3_1: Epic = self.db_manager.add_epic(
-                phase3.id,
-                "User Acceptance Testing (UAT)",
-                "Client-led testing and defect resolution.",
-            )
-            self.db_manager.add_task(
-                epic3_1.id,
-                "UAT Test Case Review & Preparation",
-                "Work with client BAs to finalize UAT test cases.",
-                ssa1_name_str,
-                "High",
-            )
-            self.db_manager.add_task(
-                epic3_1.id,
-                "UAT Environment Setup & Data Load",
-                "Prepare and load data into UAT environment.",
-                sa2_name_str,
-                "High",
-            )
-            self.db_manager.add_task(
-                epic3_1.id,
-                "UAT Defect Triage & Resolution Cycles",
-                "Manage, prioritize, and resolve defects found during UAT.",
-                f"{offshore_pm_name_str} (Offshore Team), {ssa1_name_str}",
-                "High",
-            )
+            epic3_1: Epic = self.db_manager.add_epic(phase3.id, "User Acceptance Testing (UAT)", "Client-led testing and defect resolution.")
+            self.db_manager.add_task(epic3_1.id, "UAT Test Case Review & Preparation", "Work with client BAs to finalize UAT test cases.", ssa1_name_str, 'High')
+            self.db_manager.add_task(epic3_1.id, "UAT Environment Setup & Data Load", "Prepare and load data into UAT environment.", sa2_name_str, 'High')
+            self.db_manager.add_task(epic3_1.id, "UAT Defect Triage & Resolution Cycles", "Manage, prioritize, and resolve defects found during UAT.", f"{offshore_pm_name_str} (Offshore Team), {ssa1_name_str}", 'High')
 
-            epic3_2: Epic = self.db_manager.add_epic(
-                phase3.id,
-                "Deployment Readiness & Go-Live",
-                "Final preparations for production deployment.",
-            )
-            self.db_manager.add_task(
-                epic3_2.id,
-                "Production Deployment Plan",
-                "Develop detailed plan including rollback strategy.",
-                ssa1_name_str,
-                "High",
-            )
-            self.db_manager.add_task(
-                epic3_2.id,
-                "Pre-Go-Live System Health Checks",
-                "Perform final checks on performance, data integrity.",
-                sa2_name_str,
-                "High",
-            )
-            self.db_manager.add_task(
-                epic3_2.id,
-                "Post-Go-Live Support Plan",
-                "Define support structure for immediate post-deployment.",
-                ssa1_name_str,
-                "High",
-            )
+            epic3_2: Epic = self.db_manager.add_epic(phase3.id, "Deployment Readiness & Go-Live", "Final preparations for production deployment.")
+            self.db_manager.add_task(epic3_2.id, "Production Deployment Plan", "Develop detailed plan including rollback strategy.", ssa1_name_str, 'High')
+            self.db_manager.add_task(epic3_2.id, "Pre-Go-Live System Health Checks", "Perform final checks on performance, data integrity.", sa2_name_str, 'High')
+            self.db_manager.add_task(epic3_2.id, "Post-Go-Live Support Plan", "Define support structure for immediate post-deployment.", ssa1_name_str, 'High')
 
-            QMessageBox.information(
-                self, "Success", "Initial project plan (Phases, Epics, Tasks) added successfully!"
-            )
-            self._load_project_plan_tree()  # Refresh the tree view
+            QMessageBox.information(self, "Success", "Initial project plan (Phases, Epics, Tasks) added successfully!")
+            self._load_project_plan_tree() # Refresh the tree view
         except Exception as e:
             QMessageBox.critical(self, "Error Adding Plan", f"Failed to add initial plan: {e}")
             # Optionally, you might want to rollback changes if multiple DB operations fail
@@ -723,11 +540,7 @@ class ProjectPlannerApp(QMainWindow):
     def _submit_daily_log(self) -> None:
         """Submits the daily log entry to the database."""
         if self._current_project_id is None:
-            QMessageBox.warning(
-                self,
-                "No Project Selected",
-                "Please select a project before submitting a daily log.",
-            )
+            QMessageBox.warning(self, "No Project Selected", "Please select a project before submitting a daily log.")
             return
 
         activities_us: str = self.activities_us_input.toPlainText().strip()
@@ -739,43 +552,22 @@ class ProjectPlannerApp(QMainWindow):
         next_steps_india: str = self.next_steps_india_input.toPlainText().strip()
 
         # Get the date from the QDateEdit for the log entry
-        log_date_py: date = date(
-            self._current_log_date.year(),
-            self._current_log_date.month(),
-            self._current_log_date.day(),
-        )
+        log_date_py: date = date(self._current_log_date.year(), self._current_log_date.month(), self._current_log_date.day())
 
-        if not (
-            activities_us
-            or activities_india
-            or blockers_us
-            or blockers_india
-            or decisions_made
-            or next_steps_us
-            or next_steps_india
-        ):
-            QMessageBox.warning(
-                self, "Input Required", "Please enter at least some information for the daily log."
-            )
+        if not (activities_us or activities_india or blockers_us or blockers_india or decisions_made or next_steps_us or next_steps_india):
+            QMessageBox.warning(self, "Input Required", "Please enter at least some information for the daily log.")
             return
 
         try:
             self.db_manager.add_daily_log(
                 self._current_project_id,
-                activities_us,
-                activities_india,
-                blockers_us,
-                blockers_india,
+                activities_us, activities_india,
+                blockers_us, blockers_india,
                 decisions_made,
-                next_steps_us,
-                next_steps_india,
-                log_date=log_date_py,
+                next_steps_us, next_steps_india,
+                log_date=log_date_py
             )
-            QMessageBox.information(
-                self,
-                "Success",
-                f"Daily log for {log_date_py.strftime('%Y-%m-%d')} submitted successfully!",
-            )
+            QMessageBox.information(self, "Success", f"Daily log for {log_date_py.strftime('%Y-%m-%d')} submitted successfully!")
             # Clear fields after submission
             self.activities_us_input.clear()
             self.activities_india_input.clear()
@@ -784,7 +576,7 @@ class ProjectPlannerApp(QMainWindow):
             self.decisions_made_input.clear()
             self.next_steps_us_input.clear()
             self.next_steps_india_input.clear()
-            self._load_daily_logs_display()  # Refresh logs display
+            self._load_daily_logs_display() # Refresh logs display
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to submit daily log: {e}")
 
@@ -796,11 +588,7 @@ class ProjectPlannerApp(QMainWindow):
         """Advances the logging date by one day."""
         self._current_log_date = self._current_log_date.addDays(1)
         self.current_log_date_display.setDate(self._current_log_date)
-        QMessageBox.information(
-            self,
-            "Date Advanced",
-            f"Logging date advanced to {self._current_log_date.toString('yyyy-MM-dd')}.",
-        )
+        QMessageBox.information(self, "Date Advanced", f"Logging date advanced to {self._current_log_date.toString('yyyy-MM-dd')}.")
         # Optionally, you could clear the daily log fields here for the new day
         self.activities_us_input.clear()
         self.activities_india_input.clear()
@@ -834,9 +622,7 @@ class ProjectPlannerApp(QMainWindow):
 
         log_text_parts: List[str] = []
         for log in logs:
-            log_text_parts.append(
-                f"--- Log for {log.log_date.strftime('%Y-%m-%d')} (Recorded: {log.timestamp.strftime('%H:%M')}) ---"
-            )
+            log_text_parts.append(f"--- Log for {log.log_date.strftime('%Y-%m-%d')} (Recorded: {log.timestamp.strftime('%H:%M')}) ---")
             if log.activities_us:
                 log_text_parts.append(f"US Activities:\n{log.activities_us}")
             if log.activities_india:
@@ -861,3 +647,4 @@ if __name__ == "__main__":
     window: ProjectPlannerApp = ProjectPlannerApp()
     window.show()
     sys.exit(app.exec())
+
